@@ -68,7 +68,24 @@ set-secrets() {
     key="$(echo "$key" | tr -d ' ')"
     [ -z "$key" ] || case "$key" in \#*) continue ;; esac
     case "$key" in
-      UPSTASH_REDIS_REST_URL|UPSTASH_REDIS_REST_TOKEN|KV_REST_API_URL|KV_REST_API_TOKEN|ADMIN_TOKEN|CRON_SECRET)
+      UPSTASH_REDIS_REST_URL|KV_REST_API_URL)
+        val="${val%\"}"; val="${val#\"}"
+        if [ -n "$val" ]; then
+          # 工作流与 Vercel 用的是 KV_ 前缀，这里两个名字都写，避免对不上
+          printf '%s' "$val" | gh secret set KV_REST_API_URL
+          printf '%s' "$val" | gh secret set UPSTASH_REDIS_REST_URL
+          echo "    ✅ KV_REST_API_URL / UPSTASH_REDIS_REST_URL"
+        fi
+        ;;
+      UPSTASH_REDIS_REST_TOKEN|KV_REST_API_TOKEN)
+        val="${val%\"}"; val="${val#\"}"
+        if [ -n "$val" ]; then
+          printf '%s' "$val" | gh secret set KV_REST_API_TOKEN
+          printf '%s' "$val" | gh secret set UPSTASH_REDIS_REST_TOKEN
+          echo "    ✅ KV_REST_API_TOKEN / UPSTASH_REDIS_REST_TOKEN"
+        fi
+        ;;
+      ADMIN_TOKEN|CRON_SECRET)
         val="${val%\"}"; val="${val#\"}"
         if [ -n "$val" ]; then
           printf '%s' "$val" | gh secret set "$key"

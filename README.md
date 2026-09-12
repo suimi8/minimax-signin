@@ -189,6 +189,26 @@ gh secret set UPSTASH_REDIS_REST_TOKEN < <(echo -n "$UPSTASH_REDIS_REST_TOKEN")
 
 </details>
 
+#### A3.5 关于 Secrets 命名（容易踩的坑）
+
+工作流里引用的是 `secrets.KV_REST_API_URL` 与 `secrets.KV_REST_API_TOKEN`
+（跟 Vercel KV 的自动注入同名）。而我们的存储层两个名字都认：
+
+| Secrets 名 | 说明 |
+|---|---|
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | **工作流需要的名字** |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | 本地 `.env` 用的名字 |
+
+`scripts/publish.sh` 会把两个名字都写上，所以正常不会出问题。
+如果你手动配，只填了 `UPSTASH_*`，日志里会出现：
+
+```
+KV_REST_API_URL:            ← 空！
+存储后端: 本地文件 .tasks.json   ← 说明没连上 KV
+```
+
+看到这个就是没连上 KV，补上 `KV_` 前缀的两个即可。
+
 #### A4. 启用定时
 
 > ⚠️ **GitHub 的已知限制**：OAuth 应用（`gh auth login` 默认那种 token）**没有 `workflow` scope**，
