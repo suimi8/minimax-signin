@@ -37,6 +37,9 @@ else
   gh repo create "$REPO" --public --source=. --remote=origin --push
 fi
 
+echo "==> 部署前自检（确保每个 handler 能被 import）"
+node scripts/check-deploy.mjs || exit 1
+
 echo "==> 配置 git 凭证（gh auth login 不会自动做这一步）"
 gh auth setup-git 2>/dev/null || true
 
