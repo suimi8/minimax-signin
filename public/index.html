@@ -173,6 +173,15 @@ async function api(path, opts) {
 })();
 
 /* ---------------- 任务详情 ---------------- */
+function setTag(cls, text) {
+  // 注意：不能用 outerHTML 替换——那会把带 id 的元素整个换掉，
+  // 下次 $('#taskTag') 就取不到了（"Cannot set properties of null"）
+  const el = document.getElementById('taskTag');
+  if (!el) return;
+  el.className = 'tag' + (cls ? ' ' + cls : '');
+  el.textContent = text;
+}
+
 function currentMetaUid() { return null; } // 新建任务：不预占 uid
 
 let currentUid = new URLSearchParams(location.search).get('uid');
@@ -181,16 +190,15 @@ async function loadTask(uid) {
   if (!uid) return;
   currentUid = uid;
   $('#taskCard').style.display = '';
-  $('#taskTag').textContent = '加载中…';
-  $('#taskTag').className = 'tag';
+  setTag('', '加载中…');
   try {
     const d = await api('/api/status?uid=' + encodeURIComponent(uid));
     hideBanner();
-    if (!d.ok) { $('#taskTag').outerHTML = '<span class="tag err">查询失败</span>';
+    if (!d.ok) { setTag('err', '查询失败');
       $('#taskKv').innerHTML = `<b>错误</b><span>${d.error}</span>`; return; }
 
     if (d.needLogin) {
-      $('#taskTag').outerHTML = '<span class="tag err">需要重新扫码</span>';
+      setTag('err', '需要重新扫码');
       $('#taskKv').innerHTML = `<b>uid</b><span><code>${uid}</code></span>
         <b>备注</b><span>${d.name || '-'}</span>
         <b>计划</b><span>${d.scheduleText || '-'}</span>
@@ -199,13 +207,13 @@ async function loadTask(uid) {
       return;
     }
     if (d.error) {
-      $('#taskTag').outerHTML = '<span class="tag warn">接口异常</span>';
+      setTag('warn', '接口异常');
       $('#taskKv').innerHTML = `<b>uid</b><span><code>${uid}</code></span><b>错误</b><span>${d.error}</span>`;
       $('#days').innerHTML = '';
       return;
     }
 
-    $('#taskTag').outerHTML = '<span class="tag ok">已绑定</span>';
+    setTag('ok', '已绑定');
     const a = d.account || {};
     $('#taskKv').innerHTML = `
       <b>uid</b><span><code>${uid}</code></span>
@@ -228,7 +236,7 @@ async function loadTask(uid) {
     $('#manageHint').innerHTML = `管理链接：<code>${url}</code>　（建议收藏；任何人拿到即可操作此任务）`;
     $('#lookupUid').value = uid;
   } catch (e) {
-    $('#taskTag').outerHTML = '<span class="tag err">查询失败</span>';
+    setTag('err', '查询失败');
     $('#taskKv').innerHTML = `<b>错误</b><span>${e.message}</span>`;
   }
 }
