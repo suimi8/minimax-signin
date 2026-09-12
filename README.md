@@ -1,4 +1,12 @@
-# MiniMax Agent 多人自动签到（Vercel）
+# MiniMax Agent 多人自动签到
+
+> 线上实例：
+> - 网页 / 接口：<https://minimax-signin.vercel.app>（Vercel Hobby，免费）
+> - 定时签到：GitHub Actions <https://github.com/suimi8/minimax-signin/actions>（免费）
+> - 存储：Upstash Redis（免费额度）
+>
+> 三者共用同一份 KV，整套**零成本**。
+
 
 每个人一个签到任务：**各自扫码绑定自己的账号、各自设定签到时间、各自配置通知**。
 系统按 Cron 定时遍历所有到点的任务并完成签到；凭证失效时用户自己重新扫码即可，无需改代码。
