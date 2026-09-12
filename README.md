@@ -191,6 +191,22 @@ gh secret set UPSTASH_REDIS_REST_TOKEN < <(echo -n "$UPSTASH_REDIS_REST_TOKEN")
 
 #### A4. 启用定时
 
+> ⚠️ **GitHub 的已知限制**：OAuth 应用（`gh auth login` 默认那种 token）**没有 `workflow` scope**，
+> 无法创建或修改 `.github/workflows/` 下的文件，git push、Contents API、Git Data API 都会
+> 返回 404/拒绝。首次添加 workflow 必须二选一：
+>
+> - **推荐**：用 GitHub 网页编辑器创建该文件（30 秒，无需任何 token）
+>   → `https://github.com/<你>/<仓库>/new/master?filename=.github/workflows/signin.yml`
+> - 或者：创建**经典 PAT** 并勾选 `workflow` scope，用它推送一次
+>
+> 一旦文件在仓库里存在，后续用普通 token 修改它也是允许的（限制只针对 OAuth app）。
+
+推上去后打开仓库的 Actions 页启用工作流（默认 `*/30 * * * *`）。
+公开仓库不限分钟数，想更精确可把工作流里的 cron 改成 `*/10`。
+
+手动验证：Actions → `MiniMax 每日签到` → Run workflow。
+
+
 推上去后打开仓库的 Actions 页启用工作流（默认 `*/30 * * * *`）。
 公开仓库不限分钟数，想更精确可把 `.github/workflows/signin.yml` 改成 `*/10`。
 
