@@ -1,14 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "crons": [
-    {
-      "path": "/api/cron",
-      "schedule": "*/10 * * * *"
-    }
-  ],
+  "framework": null,
+  "outputDirectory": "public",
+
   "functions": {
     "api/**/*.js": {
-      "maxDuration": 300
+      "maxDuration": 60
     }
   }
 }

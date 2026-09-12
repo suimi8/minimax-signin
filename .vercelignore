@@ -1,0 +1,15 @@
+# 排除不需要上传的文件（120MB 的 HAR 一定要排除，否则部署极慢）
+node_modules
+.git
+.workbuddy-ai
+*.har
+qr.png
+qr.jpg
+.env
+.env.local
+.env.*.local
+.creds.json
+.tasks.json
+.tasks.json.*.tmp
+signin-local.yml.bak
+.DS_Store

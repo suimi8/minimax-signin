@@ -108,7 +108,9 @@ user:{uid}    JSON     单个任务
 
 ## 四、调度模型
 
-Cron 每 **10 分钟**触发一次（`vercel.json` 中 `*/10 * * * *`）。
+Cron 每 **10 分钟**触发一次，由 **GitHub Actions** 负责（`.github/workflows/signin.yml`）。
+`vercel.json` 里**没有**配 cron —— Hobby 计划的 cron 每天只能跑一次，配 `*/10` 会导致部署失败；
+需要 Vercel 自己定时的话见方案 C。
 
 判定规则：
 
@@ -275,13 +277,19 @@ wrangler deploy
 > 免费版 CPU 时间有限（Worker 单次执行），`wrangler.toml` 里已把并发降到 5、预算降到 45s。
 > 如果用户签到时间很集中（比如几十人都是 09:00），建议错峰，或改用方案 A。
 
-### 方案 C：Vercel Pro（花钱买省心）
+### 方案 C：Vercel 自己定时（需 Pro）
 
 ```bash
 vercel deploy --prod
 ```
 
-`vercel.json` 里已配 `*/10` 的 Cron 与 `maxDuration: 300`，接上 KV 就能直接用。
+然后在 `vercel.json` 里加回 crons（Hobby 计划不支持这种频率，配了会部署失败）：
+
+```json
+"crons": [{ "path": "/api/cron", "schedule": "*/10 * * * *" }]
+```
+
+并把 `functions` 的 `maxDuration` 从 `60` 提到 `300`（Pro 上限）。
 
 ## 六、接口一览
 
