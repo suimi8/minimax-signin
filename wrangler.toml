@@ -1,0 +1,26 @@
+name = "minimax-signin"
+main = "worker/index.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# 每 10 分钟触发一次（用户自定义签到时刻依赖这个频率）
+[triggers]
+crons = ["*/10 * * * *"]
+
+# 静态托管 public/ 下的页面
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[observability]
+enabled = true
+
+# 敏感值请用 `wrangler secret put XXX` 设置，不要写在这里：
+#   KV_REST_API_URL / KV_REST_API_TOKEN
+#   CRON_SECRET / ADMIN_TOKEN（可选）
+#   CRON_CONCURRENCY / CRON_BUDGET_MS（可选）
+
+# Workers 免费版单次 CPU 时间有限，100+ 用户建议把并发调小、预算调小
+[vars]
+CRON_CONCURRENCY = "5"
+CRON_BUDGET_MS = "45000"

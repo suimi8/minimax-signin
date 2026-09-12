@@ -1,0 +1,16 @@
+{
+  "name": "minimax-signin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MiniMax Agent (agent.minimaxi.com) 自动签到，部署在 Vercel，凭证失效可扫码重新登录",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "login": "node scripts/login.mjs",
+    "check": "node scripts/check.mjs",
+    "vercel:dev": "vercel dev"
+  }
+}

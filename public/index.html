@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MiniMax 多人自动签到</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --line:#e6e8eb; --text:#1b1d21; --muted:#6b7280;
+    --brand:#2f6bff; --ok:#0f9d58; --warn:#e0a300; --err:#d93025; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 64px}
+  h1{font-size:22px;margin:0 0 4px}
+  h2{font-size:15px;margin:0 0 12px}
+  .sub{color:var(--muted);margin:0 0 24px;font-size:13.5px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px;margin-bottom:16px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  label{font-size:12.5px;color:var(--muted);display:block;margin-bottom:5px}
+  input,select{width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:9px;
+    font-size:14px;background:#fff;color:var(--text);outline:none;font-family:inherit}
+  input:focus,select:focus{border-color:var(--brand)}
+  button{padding:9px 16px;border:0;border-radius:9px;background:var(--brand);color:#fff;
+    font-size:14px;cursor:pointer;font-weight:500;font-family:inherit}
+  button:hover{filter:brightness(1.06)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  button.ghost{background:#fff;color:var(--text);border:1px solid var(--line)}
+  button.danger{background:#fff;color:var(--err);border:1px solid #f3c3bf}
+  .tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;background:#eef2ff;color:#3550c8}
+  .tag.ok{background:#e7f6ec;color:#126b34}
+  .tag.warn{background:#fdf3dc;color:#8a6500}
+  .tag.err{background:#fdeceb;color:#a3271e}
+  .kv{display:grid;grid-template-columns:110px 1fr;gap:6px 14px;font-size:13px}
+  .kv b{color:var(--muted);font-weight:500}
+  .qr{display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0}
+  .qr-mask{position:relative}
+  .qr-mask img{width:220px;height:220px;background:#fff;border:1px solid var(--line);border-radius:10px}
+  .qr-mask .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.85);border-radius:10px;text-align:center;padding:12px;font-size:13px}
+  .days{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .day{min-width:64px;text-align:center;border:1px solid var(--line);border-radius:10px;padding:8px 6px;font-size:12px}
+  .day .p{font-weight:600;font-size:13px}
+  .day.s-done{background:#e7f6ec;border-color:#bfe3c9}
+  .day.s-now{background:#eef2ff;border-color:#c3d0ff}
+  .day.s-lock{color:var(--muted)}
+  pre{background:#0f1115;color:#dfe3ea;padding:14px;border-radius:10px;overflow:auto;
+    font-size:12px;line-height:1.55;max-height:320px;margin:0;white-space:pre-wrap}
+  .hint{color:var(--muted);font-size:12.5px;margin-top:8px}
+  .banner{background:#fdeceb;border:1px solid #f5c2bd;color:#a3271e;border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:16px;font-size:13px;white-space:pre-wrap}
+  .banner b{display:block;margin-bottom:4px}
+  .ok-box{background:#e7f6ec;border:1px solid #bfe3c9;color:#126b34;border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:16px;font-size:13px;word-break:break-all}
+  .ok-box b{display:block;margin-bottom:6px}
+  .spacer{height:10px}
+  code{background:#f1f2f4;padding:1px 5px;border-radius:5px;font-size:12.5px}
+  hr{border:0;border-top:1px solid var(--line);margin:18px 0}
+  .taskitem{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+  .taskitem .t{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner" id="banner" style="display:none"></div>
+  <div class="ok-box" id="okBox" style="display:none"></div>
+
+  <h1>MiniMax 多人自动签到</h1>
+  <p class="sub">每人一个签到任务，各自设定签到时间与通知方式。凭证失效时用微信扫码重新绑定即可。</p>
+
+  <!-- 已有任务 -->
+  <div class="card" id="lookupCard">
+    <h2>查看 / 管理已有任务</h2>
+    <div class="row">
+      <input id="lookupUid" placeholder="粘贴管理链接里的 uid（u_ 开头）" style="flex:1;min-width:240px" />
+      <button class="ghost" id="btnLookup">打开</button>
+    </div>
+    <div class="hint">把地址栏里 <code>?uid=...</code> 的链接收藏起来，随时可回来查看或重新扫码。</div>
+  </div>
+
+  <!-- 任务详情 -->
+  <div class="card" id="taskCard" style="display:none">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">任务详情</h2><span id="taskTag" class="tag">—</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="kv" id="taskKv"></div>
+    <div class="days" id="days"></div>
+    <hr />
+    <div class="row">
+      <button id="btnRebind">重新扫码</button>
+      <button class="ghost" id="btnRunNow">立即签到</button>
+      <button class="ghost" id="btnRefresh">刷新</button>
+      <button class="danger" id="btnDelete">删除任务</button>
+    </div>
+    <div class="hint" id="manageHint"></div>
+  </div>
+
+  <!-- 新建任务 -->
+  <div class="card" id="newCard">
+    <h2>添加新的签到任务</h2>
+    <div class="grid">
+      <div><label>备注名（可选）</label><input id="fName" placeholder="例如：小明" /></div>
+      <div><label>签到时间</label>
+        <div class="row" style="flex-wrap:nowrap">
+          <select id="fHour"></select><span>:</span><select id="fMinute"></select>
+        </div>
+      </div>
+      <div><label>时区</label><select id="fTz"></select></div>
+    </div>
+    <hr />
+    <h2>通知方式（可选，可填多项）</h2>
+    <div class="grid">
+      <div><label>Bark Key</label><input id="fBark" placeholder="iOS 推送" /></div>
+      <div><label>Server 酱 SendKey</label><input id="fSc" placeholder="SCT..." /></div>
+      <div><label>Telegram Bot Token</label><input id="fTgBot" placeholder="可选" /></div>
+      <div><label>Telegram Chat ID</label><input id="fTgChat" placeholder="可选" /></div>
+    </div>
+    <div style="margin-top:12px"><label>自定义 Webhook（POST JSON）</label><input id="fHook" placeholder="https://..." /></div>
+    <div class="spacer"></div>
+    <button id="btnCreate">创建任务并扫码绑定</button>
+    <div class="hint">创建后会弹出微信二维码，扫码确认即完成绑定。管理链接只会显示一次，请务必保存。</div>
+  </div>
+
+  <!-- 二维码 -->
+  <div class="card" id="qrCard" style="display:none">
+    <h2>微信扫码绑定</h2>
+    <div class="qr" id="qrBox"></div>
+    <div class="hint" id="qrMsg">请使用微信扫描二维码</div>
+  </div>
+
+  <div class="card" id="logCard" style="display:none">
+    <h2>执行日志</h2>
+    <pre id="log"></pre>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+
+function showBanner(t, b) { const e = $('#banner'); e.innerHTML = `<b>${t}</b>${b}`; e.style.display = ''; }
+function hideBanner() { $('#banner').style.display = 'none'; }
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  const ct = r.headers.get('content-type') || '';
+  const txt = await r.text();
+  if (!ct.includes('application/json')) {
+    showBanner('⚠️ 后端接口不可用（HTTP ' + r.status + '）',
+      `当前地址 <code>${location.origin}</code> 只是静态文件服务，没有 /api 后端。\n` +
+      `请用 <code>npm run dev</code> → http://localhost:3000，或访问已部署的域名。`);
+    throw new Error(`${path} 返回非 JSON（HTTP ${r.status}）`);
+  }
+  let d; try { d = JSON.parse(txt); } catch { throw new Error(`${path} 响应解析失败：${txt.slice(0, 120)}`); }
+  if (r.status >= 500) throw new Error(d.error || `HTTP ${r.status}`);
+  return d;
+}
+
+/* ---------------- 下拉框初始化 ---------------- */
+(function initSelects() {
+  const h = $('#fHour'), m = $('#fMinute'), tz = $('#fTz');
+  for (let i = 0; i < 24; i++) h.add(new Option(String(i).padStart(2, '0'), i));
+  for (let i = 0; i < 60; i += 5) m.add(new Option(String(i).padStart(2, '0'), i));
+  const zones = [
+    [480, 'UTC+8 北京时间'], [0, 'UTC+0'], [-480, 'UTC-8 美西'], [-300, 'UTC-5 美东'],
+    [540, 'UTC+9 日本'], [420, 'UTC+7 泰国'], [330, 'UTC+5:30 印度'], [60, 'UTC+1 欧洲中部'],
+  ];
+  zones.forEach(([v, t]) => tz.add(new Option(t, v)));
+  h.value = 9; m.value = 0; tz.value = 480;
+})();
+
+/* ---------------- 任务详情 ---------------- */
+let currentUid = new URLSearchParams(location.search).get('uid');
+
+async function loadTask(uid) {
+  if (!uid) return;
+  currentUid = uid;
+  $('#taskCard').style.display = '';
+  $('#taskTag').textContent = '加载中…';
+  $('#taskTag').className = 'tag';
+  try {
+    const d = await api('/api/status?uid=' + encodeURIComponent(uid));
+    hideBanner();
+    if (!d.ok) { $('#taskTag').outerHTML = '<span class="tag err">查询失败</span>';
+      $('#taskKv').innerHTML = `<b>错误</b><span>${d.error}</span>`; return; }
+
+    if (d.needLogin) {
+      $('#taskTag').outerHTML = '<span class="tag err">需要重新扫码</span>';
+      $('#taskKv').innerHTML = `<b>uid</b><span><code>${uid}</code></span>
+        <b>备注</b><span>${d.name || '-'}</span>
+        <b>计划</b><span>${d.scheduleText || '-'}</span>
+        <b>提示</b><span>凭证缺失或已失效，点「重新扫码」重新绑定。</span>`;
+      $('#days').innerHTML = '';
+      return;
+    }
+    if (d.error) {
+      $('#taskTag').outerHTML = '<span class="tag warn">接口异常</span>';
+      $('#taskKv').innerHTML = `<b>uid</b><span><code>${uid}</code></span><b>错误</b><span>${d.error}</span>`;
+      $('#days').innerHTML = '';
+      return;
+    }
+
+    $('#taskTag').outerHTML = '<span class="tag ok">已绑定</span>';
+    const a = d.account || {};
+    $('#taskKv').innerHTML = `
+      <b>uid</b><span><code>${uid}</code></span>
+      <b>账号</b><span>${a.name || '-'}（ID ${a.userId || '-'}）</span>
+      <b>备注</b><span>${d.name || '-'}</span>
+      <b>注册天数</b><span>${a.retentionDays ?? '-'}</span>
+      <b>签到时间</b><span>${d.scheduleText || '-'}</span>
+      <b>Token 过期</b><span>${d.tokenExpiresAt || '-'}</span>
+      <b>上次执行</b><span>${d.lastRunAt || '未执行'}</span>
+      <b>上次结果</b><span>${d.lastResult ? JSON.stringify(d.lastResult) : (d.lastError || '-')}</span>`;
+
+    $('#days').innerHTML = ((d.signin && d.signin.days) || []).map(x => {
+      const cls = x.status === 3 ? 's-done' : (x.is_today && x.status === 2) ? 's-now' : 's-lock';
+      const label = x.status === 3 ? '已领取' : (x.status === 2 ? '可领取' : '未解锁');
+      return `<div class="day ${cls}"><div class="p">${x.points}</div><div>第${x.day_no}天</div>
+        <div style="color:#6b7280">${label}</div></div>`;
+    }).join('');
+
+    const url = location.origin + '/?uid=' + uid;
+    $('#manageHint').innerHTML = `管理链接：<code>${url}</code>　（建议收藏；任何人拿到即可操作此任务）`;
+    $('#lookupUid').value = uid;
+  } catch (e) {
+    $('#taskTag').outerHTML = '<span class="tag err">查询失败</span>';
+    $('#taskKv').innerHTML = `<b>错误</b><span>${e.message}</span>`;
+  }
+}
+
+/* ---------------- 扫码绑定 ---------------- */
+let pollToken = 0;
+
+async function startLogin(uid) {
+  pollToken++;
+  const myToken = pollToken;
+  const alive = () => myToken === pollToken;
+
+  $('#qrCard').style.display = '';
+  $('#qrBox').innerHTML = '<div class="hint">正在生成二维码…</div>';
+  $('#qrMsg').textContent = '请使用微信扫描二维码';
+  $('#qrMsg').style.color = '';
+
+  let d;
+  try { d = await api('/api/login/start'); } catch (e) {
+    $('#qrBox').innerHTML = '<div class="hint" style="color:#d93025">' + e.message + '</div>'; return; }
+  if (!d.ok) { $('#qrBox').innerHTML = '<div class="hint" style="color:#d93025">' + d.error + '</div>'; return; }
+
+  $('#qrBox').innerHTML =
+    `<div class="qr-mask"><img id="qrImg" src="${d.qrDataUrl}" alt="二维码"/>
+     <div class="overlay" id="qrOv" style="display:none"></div></div>
+     <div class="hint">二维码 3 分钟内有效</div>`;
+
+  let last = '', dead = false, fails = 0;
+
+  // 自调度：上一次返回后才发下一次，避免并发拿到同一个一次性 wx_code
+  async function loop() {
+    if (dead || !alive()) return;
+    let p;
+    try {
+      p = await api('/api/login/poll', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uuid: d.uuid, last, uid })
+      });
+      if (!alive()) return;
+      fails = 0;
+    } catch (e) {
+      if (!alive()) return;
+      fails++;
+      $('#qrMsg').style.color = '#d93025';
+      $('#qrMsg').textContent = '网络异常（' + fails + '）：' + (e.message || e);
+      if (fails >= 3) { dead = true; $('#qrMsg').textContent = '连续 3 次失败，请点「创建任务并扫码绑定」重试。'; return; }
+      return setTimeout(loop, 2500);
+    }
+
+    if (!p.ok) {
+      $('#qrMsg').style.color = '#d93025'; $('#qrMsg').textContent = p.error || '出错了';
+      dead = true; return;
+    }
+    if (p.done) {
+      dead = true;
+      $('#qrImg').style.opacity = '.25';
+      $('#qrMsg').style.color = '#126b34';
+      $('#qrMsg').textContent = '✅ 绑定成功：' + ((p.account && p.account.name) || '') +
+        (p.duplicate ? '（复用结果）' : '');
+      const url = location.origin + '/?uid=' + p.uid;
+      $('#okBox').innerHTML = `<b>🎉 任务已创建，请立即保存管理链接</b>
+        <code>${url}</code><br/><br/>
+        <a href="${url}" style="color:#126b34">打开管理页</a>　·　
+        <button class="ghost" style="padding:4px 10px;font-size:12px" onclick="navigator.clipboard.writeText('${url}')">复制链接</button>`;
+      $('#okBox').style.display = '';
+      loadTask(p.uid);
+      return;
+    }
+    if (p.expired) {
+      dead = true;
+      $('#qrImg').style.opacity = '.25';
+      $('#qrOv').style.display = 'flex';
+      $('#qrOv').textContent = p.message + '，请重新扫码';
+      $('#qrMsg').style.color = '#a3271e';
+      $('#qrMsg').textContent = p.message || '二维码已失效';
+      return;
+    }
+    last = p.nextLast || '';
+    $('#qrMsg').style.color = '';
+    $('#qrMsg').textContent = p.message || '等待扫码…';
+    if (p.errcode === 404) { $('#qrOv').style.display = 'flex'; $('#qrOv').textContent = '已扫码，请在微信上确认'; }
+    setTimeout(loop, 800);
+  }
+  setTimeout(loop, 600);
+}
+
+/* ---------------- 事件 ---------------- */
+$('#btnLookup').onclick = () => {
+  const v = $('#lookupUid').value.trim();
+  const m = v.match(/uid=(u_[A-Za-z0-9_-]+)/);
+  const uid = m ? m[1] : v;
+  if (uid) loadTask(uid);
+};
+$('#btnCreate').onclick = async () => {
+  const body = {
+    name: $('#fName').value.trim(),
+    hour: +$('#fHour').value, minute: +$('#fMinute').value, tzOffset: +$('#fTz').value,
+    notify: {
+      bark: $('#fBark').value.trim(), serverchan: $('#fSc').value.trim(),
+      webhook: $('#fHook').value.trim(),
+      telegramBotToken: $('#fTgBot').value.trim(), telegramChatId: $('#fTgChat').value.trim(),
+    },
+  };
+  try {
+    const d = await api('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!d.ok) throw new Error(d.error);
+    $('#okBox').style.display = 'none';
+    startLogin(d.uid);
+  } catch (e) { showBanner('创建失败', e.message); }
+};
+$('#btnRebind').onclick = () => { if (currentUid) startLogin(currentUid); };
+$('#btnRefresh').onclick = () => currentUid && loadTask(currentUid);
+$('#btnDelete').onclick = async () => {
+  if (!currentUid || !confirm('确认删除该签到任务？此操作不可恢复。')) return;
+  await api('/api/tasks?uid=' + encodeURIComponent(currentUid), { method: 'DELETE' });
+  $('#taskCard').style.display = 'none';
+  $('#okBox').innerHTML = '<b>任务已删除</b>'; $('#okBox').style.display = '';
+};
+$('#btnRunNow').onclick = async () => {
+  if (!currentUid) return;
+  $('#logCard').style.display = '';
+  $('#log').textContent = '执行中…';
+  const d = await api('/api/cron?uid=' + encodeURIComponent(currentUid));
+  $('#log').textContent = JSON.stringify(d, null, 2);
+  loadTask(currentUid);
+};
+
+if (currentUid) loadTask(currentUid);
+</script>
+</body>
+</html>

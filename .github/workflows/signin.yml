@@ -1,0 +1,49 @@
+name: MiniMax 每日签到
+
+on:
+  schedule:
+    # 每 30 分钟检查一次（UTC 时间）。
+    # 用户各自设定的本地签到时刻到点后，会在下一个 tick 被处理，最坏延迟 30 分钟。
+    # 公开仓库不限运行分钟数，可改成 */10 提高精度；私有仓库免费额度 2000 分钟/月，
+    # */30 每月约 1440 次 × 1 分钟 ≈ 1440 分钟，仍在额度内。
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # 允许手动触发
+    inputs:
+      dry:
+        description: '只列出到点任务，不执行'
+        type: boolean
+        default: false
+      uid:
+        description: '只跑指定 uid（留空=全部）'
+        type: string
+        required: false
+
+jobs:
+  signin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: minimax-signin
+      cancel-in-progress: false # 不取消，避免上一轮签到被打断
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 执行签到
+        env:
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          CRON_CONCURRENCY: '10'
+          CRON_BUDGET_MS: '240000'
+        run: |
+          if [ "${{ inputs.dry }}" = "true" ]; then
+            node scripts/cron-run.mjs --dry
+          elif [ -n "${{ inputs.uid }}" ]; then
+            node scripts/cron-run.mjs --uid=${{ inputs.uid }}
+          else
+            node scripts/cron-run.mjs
+          fi

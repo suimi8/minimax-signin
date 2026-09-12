@@ -1,0 +1,16 @@
+node_modules/
+.vercel/
+.env
+.env.local
+.creds.json
+qr.png
+js/
+*.har
+.DS_Store
+
+login-result.json
+
+.tasks.json
+.tasks.json.*.tmp
+
+.workbuddy-ai/
