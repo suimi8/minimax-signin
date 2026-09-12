@@ -37,8 +37,28 @@ else
   gh repo create "$REPO" --public --source=. --remote=origin --push
 fi
 
+echo "==> 配置 git 凭证（gh auth login 不会自动做这一步）"
+gh auth setup-git 2>/dev/null || true
+
 echo "==> 推送代码"
-git push -u origin HEAD:main 2>/dev/null || git push -u origin HEAD:master
+BRANCH="$(git branch --show-current)"
+if ! git push -u origin "HEAD:$BRANCH" 2>/tmp/push-err; then
+  if grep -q "workflow" /tmp/push-err 2>/dev/null; then
+    echo
+    echo "⚠️  推送被拒绝：当前 token 缺少 workflow scope"
+    echo "    GitHub 不允许 OAuth 应用创建/修改 .github/workflows/ 下的文件。"
+    echo "    二选一："
+    echo "      A. 用经典 PAT（勾选 workflow scope）后重跑本脚本"
+    echo "      B. 直接在网页创建该文件："
+    echo "         https://github.com/$GH_USER/$REPO/new/$BRANCH?filename=.github/workflows/signin.yml"
+    echo "         （内容即本地 .github/workflows/signin.yml）"
+    rm -f /tmp/push-err
+    exit 1
+  fi
+  cat /tmp/push-err; rm -f /tmp/push-err
+  exit 1
+fi
+rm -f /tmp/push-err
 
 echo "==> 写入 Actions Secrets"
 set-secrets() {
