@@ -168,7 +168,34 @@ vercel deploy --prod
 环境变量只需要 `KV_REST_API_URL` + `KV_REST_API_TOKEN`（以及可选的 `ADMIN_TOKEN`）。
 Vercel 的 Cron 可以不管——批量签到交给 GitHub Actions。
 
-#### A3. 配置 GitHub Actions 定时
+#### A3. 一键发布到 GitHub
+
+```bash
+gh auth login              # 首次需要登录
+bash scripts/publish.sh    # 默认仓库名 minimax-signin，可加参数改
+```
+
+脚本会建公开仓库、推代码，并把 `.env` 里的 KV 凭证自动写进仓库 Secrets。
+
+<details><summary>手动步骤（不想用脚本时展开）</summary>
+
+```bash
+gh auth login
+gh repo create minimax-signin --public --source=. --remote=origin --push
+
+gh secret set UPSTASH_REDIS_REST_URL  < <(echo -n "$UPSTASH_REDIS_REST_URL")
+gh secret set UPSTASH_REDIS_REST_TOKEN < <(echo -n "$UPSTASH_REDIS_REST_TOKEN")
+```
+
+</details>
+
+#### A4. 启用定时
+
+推上去后打开仓库的 Actions 页启用工作流（默认 `*/30 * * * *`）。
+公开仓库不限分钟数，想更精确可把 `.github/workflows/signin.yml` 改成 `*/10`。
+
+手动验证：Actions → `MiniMax 每日签到` → Run workflow。
+
 
 1. 把代码推到 GitHub 仓库
 2. Settings → Secrets and variables → Actions → New repository secret，添加：
@@ -180,7 +207,7 @@ Vercel 的 Cron 可以不管——批量签到交给 GitHub Actions。
 
 手动测试：Actions → 该工作流 → Run workflow。
 
-#### A4. 命令行等价用法
+#### A5. 命令行等价用法
 
 GitHub Actions 跑的就是这个脚本，任何能跑 Node 的地方都能用（服务器 crontab、群晖、软路由等）：
 
