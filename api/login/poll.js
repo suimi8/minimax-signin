@@ -1,9 +1,9 @@
-import { json, readJson } from '../lib/api.js';
-import { pollOnce, WX_STATUS_TEXT } from '../lib/wx.js';
-import { loginWithWxCode } from '../lib/minimax.js';
-import { getUser, putUser, newUid, storageHint, activeBackend } from '../lib/store.js';
-import { notifyUser } from '../lib/notify.js';
-import { normalizeInput } from '../lib/tasks.js';
+import { json, readJson } from '../../lib/api.js';
+import { pollOnce, WX_STATUS_TEXT } from '../../lib/wx.js';
+import { loginWithWxCode } from '../../lib/minimax.js';
+import { getUser, putUser, newUid, storageHint, activeBackend } from '../../lib/store.js';
+import { notifyUser } from '../../lib/notify.js';
+import { normalizeInput } from '../../lib/tasks.js';
 
 /**
  * 微信 wx_code 是一次性的。若前端并发轮询，多个长轮询会拿到同一个 code

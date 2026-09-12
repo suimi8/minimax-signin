@@ -17,3 +17,6 @@ login-result.json
 
 .vercel
 .env*
+
+.DS_Store
+scripts/check-deploy.mjs.tmp
