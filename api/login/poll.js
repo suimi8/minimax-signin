@@ -3,6 +3,7 @@ import { pollOnce, WX_STATUS_TEXT } from '../lib/wx.js';
 import { loginWithWxCode } from '../lib/minimax.js';
 import { getUser, putUser, newUid, storageHint, activeBackend } from '../lib/store.js';
 import { notifyUser } from '../lib/notify.js';
+import { normalizeInput } from '../lib/tasks.js';
 
 /**
  * 微信 wx_code 是一次性的。若前端并发轮询，多个长轮询会拿到同一个 code
@@ -15,14 +16,29 @@ function pruneCodes() {
   for (const [k, v] of consumedCodes) if (now - v.ts > CODE_TTL) consumedCodes.delete(k);
 }
 
-/** 把登录结果写入指定（或新建的）任务 */
-async function bind(uid, creds, user) {
+/**
+ * 把登录结果写入指定（或新建的）任务。
+ * 任务**只在扫码成功后才创建**——避免用户点了按钮却没扫码，留下一条永远绑不上的孤儿记录。
+ */
+async function bind(uid, creds, user, meta = {}) {
   let task = uid ? await getUser(uid) : null;
   let created = false;
   if (!task) {
     if (!uid) uid = await newUid(); // 传了 uid 就用它（可能是被删后又重新绑定）
-    task = { name: user?.name || '', schedule: null, notify: {}, createdAt: new Date().toISOString() };
+    const norm = normalizeInput(meta);
+    task = {
+      name: meta.name || norm.name || user?.name || '',
+      schedule: norm.schedule,
+      notify: norm.notify,
+      createdAt: new Date().toISOString(),
+    };
     created = true;
+  } else if (meta && Object.keys(meta).length) {
+    // 重新扫码：允许顺带更新备注 / 时间 / 通知
+    const norm = normalizeInput({ ...task, ...meta });
+    task.name = meta.name ?? task.name ?? '';
+    task.schedule = norm.schedule;
+    task.notify = { ...(task.notify || {}), ...norm.notify };
   }
   task.creds = creds;
   task.account = {
@@ -40,7 +56,7 @@ async function bind(uid, creds, user) {
 
 export default async function handler(req, res) {
   try {
-    const { uuid, last = '', uid } = await readJson(req);
+    const { uuid, last = '', uid, meta = {} } = await readJson(req);
     if (!uuid) return json(res, 200, { ok: false, error: '缺少 uuid，请先调用 /api/login/start' });
 
     const { errcode, code } = await pollOnce(uuid, last, 20000);
@@ -62,7 +78,7 @@ export default async function handler(req, res) {
       }
 
       const { creds, user } = await loginWithWxCode(code);
-      const { uid: finalUid, task } = await bind(uid, creds, user);
+      const { uid: finalUid, task } = await bind(uid, creds, user, meta);
       consumedCodes.set(code, { ts: Date.now(), uid: finalUid });
 
       try {

@@ -173,6 +173,8 @@ async function api(path, opts) {
 })();
 
 /* ---------------- 任务详情 ---------------- */
+function currentMetaUid() { return null; } // 新建任务：不预占 uid
+
 let currentUid = new URLSearchParams(location.search).get('uid');
 
 async function loadTask(uid) {
@@ -234,7 +236,7 @@ async function loadTask(uid) {
 /* ---------------- 扫码绑定 ---------------- */
 let pollToken = 0;
 
-async function startLogin(uid) {
+async function startLogin(uid, meta) {
   pollToken++;
   const myToken = pollToken;
   const alive = () => myToken === pollToken;
@@ -263,7 +265,7 @@ async function startLogin(uid) {
     try {
       p = await api('/api/login/poll', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uuid: d.uuid, last, uid })
+        body: JSON.stringify({ uuid: d.uuid, last, uid, meta })
       });
       if (!alive()) return;
       fails = 0;
@@ -320,8 +322,9 @@ $('#btnLookup').onclick = () => {
   const uid = m ? m[1] : v;
   if (uid) loadTask(uid);
 };
-$('#btnCreate').onclick = async () => {
-  const body = {
+// 收集表单（不立即建任务，扫码成功才建，避免留下绑不上的孤儿记录）
+function collectMeta() {
+  return {
     name: $('#fName').value.trim(),
     hour: +$('#fHour').value, minute: +$('#fMinute').value, tzOffset: +$('#fTz').value,
     notify: {
@@ -330,13 +333,8 @@ $('#btnCreate').onclick = async () => {
       telegramBotToken: $('#fTgBot').value.trim(), telegramChatId: $('#fTgChat').value.trim(),
     },
   };
-  try {
-    const d = await api('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    if (!d.ok) throw new Error(d.error);
-    $('#okBox').style.display = 'none';
-    startLogin(d.uid);
-  } catch (e) { showBanner('创建失败', e.message); }
-};
+}
+$('#btnCreate').onclick = () => { $('#okBox').style.display = 'none'; startLogin(currentMetaUid(), collectMeta()); };
 $('#btnRebind').onclick = () => { if (currentUid) startLogin(currentUid); };
 $('#btnRefresh').onclick = () => currentUid && loadTask(currentUid);
 $('#btnDelete').onclick = async () => {
